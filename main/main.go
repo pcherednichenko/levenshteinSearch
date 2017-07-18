@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
-	"word/levenshtein"
 	"strconv"
+	"strings"
 	"time"
+	"word/levenshtein"
 )
 
 const vacabularyName = "vocabulary.txt"
@@ -40,7 +40,6 @@ func main() {
 		newLen = len(str)
 	}
 	words := strings.Split(str, " ")
-	fmt.Println(words)
 	vocabulary, err = prepareVocabulary()
 	if err != nil {
 		panic(err)
