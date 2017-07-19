@@ -1,20 +1,20 @@
-### Пример выполнения программы:
+### Example of program execution:
 
 ![screenshot1](./screenshot.png)
 
-#### Top для pprof
+#### Top by pprof
 
 ![screenshot2](./screenshot2.png)
 
-#### Отчет pprof
+#### Report pprof
 
-![report](./cpu.pprof)
+[cpu.pprof](./cpu.pprof)
 
-#### SVG диаграмма использования CPU
+#### SVG CPU usage chart
 
-![svg](./pprof.svg)
+[pprof.svg](./pprof.svg)
 
-##Task:
+## Task:
 
 ### Description
 Your program will be given a list of accepted words (vocabulary.txt). For each word W in the input file, you must find word W' from the list of accepted words such that the number of changes from W to W' is minimized. It is possible that W is already W' and thus the number of changes necessary is zero. A change is defined as replacing a single letter with another letter, adding a letter in any position, or removing a letter from any position. The total score that you need to output is the minimum number of changes necessary to make all words acceptable.
