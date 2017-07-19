@@ -3,20 +3,27 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkg/profile"
 	"io"
+	"levenshteinSearch/levenshtein"
 	"os"
+	_ "runtime/pprof"
 	"strconv"
 	"strings"
 	"time"
-	"word/levenshtein"
 )
 
-const vacabularyName = "vocabulary.txt"
-const buffer = 100
+const (
+	vacabularyName = "vocabulary.txt"
+	buffer         = 100
+	minShift       = 1
+)
 
-var vocabulary []string
+var maxLength = 0
+var vocabulary map[int][]string
 
 func main() {
+	defer profile.Start(profile.CPUProfile).Stop()
 	start := time.Now()
 	filename := os.Args[1]
 	buf := bytes.NewBuffer(nil)
@@ -27,7 +34,7 @@ func main() {
 	}
 	io.Copy(buf, file)
 
-	str := string(buf.Bytes())
+	str := strings.ToUpper(string(buf.Bytes()))
 	if len(str) == 0 {
 		panic(fmt.Sprintf("Empty file!"))
 	}
@@ -66,32 +73,84 @@ func main() {
 }
 
 // prepareVocabulary return vocabulary as slice
-func prepareVocabulary() (words []string, err error) {
+func prepareVocabulary() (map[int][]string, error) {
 	buf := bytes.NewBuffer(nil)
 	file, err := os.Open(vacabularyName)
 	defer file.Close()
 	if err != nil {
-		return
+		return nil, err
 	}
 	io.Copy(buf, file)
 	str := strings.TrimSpace(string(buf.Bytes()))
-	words = strings.Split(str, "\n")
-	return
+	words := strings.Split(str, "\n")
+	wordsSort := make(map[int][]string)
+	for _, word := range words {
+		max := len(word)
+		wordsSort[max] = append(wordsSort[len(word)], word)
+		if max > maxLength {
+			maxLength = max
+		}
+	}
+	return wordsSort, nil
 }
 
 func getDistance(in <-chan string, out chan<- int) {
-	word := strings.ToUpper(<-in)
-	min := levenshtein.Dist(word, vocabulary[0])
-	distance := min
-	for _, wordFromVoc := range vocabulary {
-		distance = levenshtein.Dist(word, wordFromVoc)
-		if distance == 0 {
-			min = 0
-			break
+	word := <-in
+	length := len(word)
+	min := 999
+	shiftLeft := length
+	shiftRight := length
+loop:
+	for {
+		if shiftLeft < minShift || shiftRight > maxLength {
+			break loop
 		}
-		if distance < min {
-			min = distance
+		diff := shiftLeft - length
+		if min == diff {
+			break loop
 		}
+		if shiftLeft == length {
+			lengthVoc := length
+			if lengthVoc == 1 {
+				lengthVoc = 2
+			}
+			for _, wordFromVoc := range vocabulary[lengthVoc] {
+				min = distanceSearch(&word, &wordFromVoc, min)
+				if min == 0 {
+					break loop
+				}
+			}
+		} else {
+			if shiftLeft > 0 {
+				for _, wordFromVoc := range vocabulary[shiftLeft] {
+					min = distanceSearch(&word, &wordFromVoc, min)
+					if min == 0 {
+						break loop
+					}
+				}
+			}
+			if shiftRight <= maxLength {
+				for _, wordFromVoc := range vocabulary[shiftRight] {
+					min = distanceSearch(&word, &wordFromVoc, min)
+					if min == 0 {
+						break loop
+					}
+				}
+			}
+		}
+		shiftLeft--
+		shiftRight++
 	}
 	out <- min
+}
+
+func distanceSearch(word *string, wordFromVoc *string, min int) int {
+	distance := levenshtein.Dist(*word, *wordFromVoc)
+	if distance == 0 {
+		return 0
+	}
+	if distance < min {
+		return distance
+	}
+	return min
 }
