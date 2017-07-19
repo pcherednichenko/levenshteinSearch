@@ -19,8 +19,11 @@ const (
 	minShift       = 1
 )
 
-var maxLength = 0
-var vocabulary map[int][]string
+var (
+	maxLength  = 0
+	vocabulary map[int][]string
+	cache      map[string]int
+)
 
 func main() {
 	defer profile.Start(profile.CPUProfile).Stop()
@@ -38,6 +41,7 @@ func main() {
 	if len(str) == 0 {
 		panic(fmt.Sprintf("Empty file!"))
 	}
+	cache = make(map[string]int)
 	before := len(str)
 	newLen := 0
 	for before != newLen {
@@ -96,6 +100,10 @@ func prepareVocabulary() (map[int][]string, error) {
 
 func getDistance(in <-chan string, out chan<- int) {
 	word := <-in
+	if min, ok := cache[word]; ok {
+		out <- min
+		return
+	}
 	length := len(word)
 	min := 999
 	shiftLeft := length
@@ -141,6 +149,7 @@ loop:
 		shiftLeft--
 		shiftRight++
 	}
+	cache[word] = min
 	out <- min
 }
 
